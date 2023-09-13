@@ -77,6 +77,9 @@ function modeFactory() {
     /**
      * Lifecycle hooks
      */
+    onModeInit: ({ extensionManager }) => {
+      extensionManager.setActiveDataSource('gcp-dicomweb');
+    },
     onModeEnter: ({ servicesManager, extensionManager, commandsManager, appConfig }) => {
       const {
         measurementService,
