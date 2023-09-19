@@ -2,6 +2,7 @@ import { hotkeys } from '@ohif/core';
 import toolbarButtons from './toolbarButtons.js';
 import { id } from './id.js';
 import initToolGroups from './initToolGroups.js';
+import { convertAnnotations } from './convertAnnotations';
 
 // Allow this mode by excluding non-imaging modalities such as SR, SEG
 // Also, SM is not a simple imaging modalities, so exclude it.
@@ -84,7 +85,14 @@ function modeFactory() {
         toolGroupService,
         panelService,
         segmentationService,
+        customizationService,
       } = servicesManager.services;
+
+      const dicomSrExtensionCustomizations = {
+        id: 'dicomSrExtensionCustomizations',
+        convertAnnotations,
+      };
+      customizationService.addModeCustomizations([dicomSrExtensionCustomizations]);
 
       measurementService.clearMeasurements();
 
