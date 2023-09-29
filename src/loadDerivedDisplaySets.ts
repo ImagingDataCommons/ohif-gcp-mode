@@ -1,4 +1,3 @@
-import { hydrateSEGDisplaySet } from '@ohif/extension-cornerstone-dicom-seg';
 import { hydrateRTDisplaySet } from '@ohif/extension-cornerstone-dicom-rt';
 import { hydrateStructuredReport } from '@ohif/extension-cornerstone-dicom-sr';
 import { cache as cs3DCache, volumeLoader } from '@cornerstonejs/core';
@@ -25,6 +24,7 @@ function getDerivedSequences(displaySetUID, servicesManager) {
 export default function loadDerivedDisplaySets(
   servicesManager,
   extensionManager,
+  commandsManager,
   evt
 ) {
   async function checkVolume(displaySet, imageIds) {
@@ -50,15 +50,8 @@ export default function loadDerivedDisplaySets(
 
   const { viewports } = viewportGridService.getState();
   const { viewportId, imageIds } = evt.detail;
-  let viewportIndex = -1;
-  for (let i = 0; i < viewports.length; i++) {
-    if ((viewports[i].viewportId = viewportId)) {
-      viewportIndex = i;
-      break;
-    }
-  }
-  const mainViewport = viewports[viewportIndex];
-  if (viewportIndex > -1) {
+  const mainViewport = viewports.get(viewportId); 
+  if (mainViewport) {
     if (mainViewport.displaySetInstanceUIDs.length === 1) {
       const mainDisplaySet = displaySetService.getDisplaySetByUID(
         mainViewport.displaySetInstanceUIDs[0]
@@ -95,10 +88,9 @@ export default function loadDerivedDisplaySets(
                 derivedDisplaySetInstanceUID
               );
             }
-            hydrateSEGDisplaySet({
-              segDisplaySet: displaySet,
-              viewportIndex,
-              servicesManager,
+            commandsManager.runCommand('loadSegmentationDisplaySetsForViewport', {
+              displaySets: [displaySet],
+              viewportId,
             });
           }, delay);
         } else if (displaySet.Modality === 'RTSTRUCT') {
@@ -124,7 +116,7 @@ export default function loadDerivedDisplaySets(
             }
             hydrateRTDisplaySet({
               rtDisplaySet: displaySet,
-              viewportIndex,
+              viewportId,
               servicesManager,
             });
           }, delay);

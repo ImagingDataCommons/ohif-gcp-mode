@@ -94,7 +94,8 @@ function modeFactory() {
       boundedLoadDerivedDisplaySets = loadDerivedDisplaySets.bind(
         null,
         servicesManager,
-        extensionManager
+        extensionManager,
+        commandsManager
       );
       measurementService.clearMeasurements();
 
