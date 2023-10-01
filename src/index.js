@@ -2,6 +2,8 @@ import { hotkeys } from '@ohif/core';
 import toolbarButtons from './toolbarButtons.js';
 import { id } from './id.js';
 import initToolGroups from './initToolGroups.js';
+import loadDerivedDisplaySets from './loadDerivedDisplaySets';
+import { eventTarget, EVENTS } from '@cornerstonejs/core';
 
 // Allow this mode by excluding non-imaging modalities such as SR, SEG
 // Also, SM is not a simple imaging modalities, so exclude it.
@@ -65,6 +67,7 @@ const extensionDependencies = {
 
 function modeFactory() {
   let _activatePanelTriggersSubscriptions = [];
+  let boundedLoadDerivedDisplaySets;
   return {
     // TODO: We're using this as a route segment
     // We should not be.
@@ -77,7 +80,7 @@ function modeFactory() {
     onModeInit: ({ extensionManager }) => {
       extensionManager.setActiveDataSource('gcp-dicomweb');
     },
-    onModeEnter: ({ servicesManager, extensionManager, commandsManager }) => {
+    onModeEnter: ({ servicesManager, extensionManager, commandsManager, appConfig }) => {
       const {
         measurementService,
         toolbarService,
@@ -85,7 +88,15 @@ function modeFactory() {
         panelService,
         segmentationService,
       } = servicesManager.services;
+      appConfig.disableEditing = true;
+      appConfig.minDisplaySetsToRunHP = 10;
 
+      boundedLoadDerivedDisplaySets = loadDerivedDisplaySets.bind(
+        null,
+        servicesManager,
+        extensionManager,
+        commandsManager
+      );
       measurementService.clearMeasurements();
 
       // Init Default and SR ToolGroups
@@ -156,8 +167,12 @@ function modeFactory() {
       //     },
       //   ]),
       // ];
+      eventTarget.addEventListener(
+        EVENTS.STACK_VIEWPORT_NEW_STACK,
+        boundedLoadDerivedDisplaySets
+      );
     },
-    onModeExit: ({ servicesManager }) => {
+    onModeExit: ({ servicesManager, appConfig }) => {
       const {
         toolGroupService,
         syncGroupService,
@@ -165,7 +180,13 @@ function modeFactory() {
         segmentationService,
         cornerstoneViewportService,
       } = servicesManager.services;
+      appConfig.disableEditing = false;
+      appConfig.minDisplaySetsToRunHP = undefined;
 
+      eventTarget.removeEventListener(
+        EVENTS.STACK_VIEWPORT_NEW_STACK,
+        boundedLoadDerivedDisplaySets
+      );
       _activatePanelTriggersSubscriptions.forEach(sub => sub.unsubscribe());
       _activatePanelTriggersSubscriptions = [];
 
