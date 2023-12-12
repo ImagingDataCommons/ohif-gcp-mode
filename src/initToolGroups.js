@@ -27,6 +27,7 @@ function initDefaultToolGroup(
       { toolName: toolNames.StackScrollMouseWheel, bindings: [] },
     ],
     passive: [
+      { toolName: 'DICOMSRDisplay' },
       { toolName: toolNames.Length },
       { toolName: toolNames.ArrowAnnotate },
       { toolName: toolNames.Bidirectional },
