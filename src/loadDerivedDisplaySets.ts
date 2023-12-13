@@ -1,4 +1,3 @@
-import { hydrateRTDisplaySet } from '@ohif/extension-cornerstone-dicom-rt';
 import { hydrateStructuredReport } from '@ohif/extension-cornerstone-dicom-sr';
 import { cache as cs3DCache, volumeLoader } from '@cornerstonejs/core';
 
@@ -114,11 +113,13 @@ export default function loadDerivedDisplaySets(
                 derivedDisplaySetInstanceUID
               );
             }
-            hydrateRTDisplaySet({
-              rtDisplaySet: displaySet,
-              viewportId,
-              servicesManager,
-            });
+            commandsManager.runCommand(
+              "loadSegmentationDisplaySetsForViewport",
+              {
+                displaySets: [displaySet],
+                viewportId,
+              }
+            );
           }, delay);
         } else if (displaySet.Modality === 'SR') {
           setTimeout(() => {
