@@ -1,9 +1,9 @@
-import { hotkeys } from '@ohif/core';
-import toolbarButtons from './toolbarButtons.js';
-import { id } from './id.js';
-import initToolGroups from './initToolGroups.js';
-import loadDerivedDisplaySets from './loadDerivedDisplaySets';
-import { eventTarget, EVENTS } from '@cornerstonejs/core';
+import { hotkeys } from "@ohif/core";
+import toolbarButtons from "./toolbarButtons.js";
+import { id } from "./id.js";
+import initToolGroups from "./initToolGroups.js";
+import loadDerivedDisplaySets from "./loadDerivedDisplaySets";
+import { eventTarget, EVENTS } from "@cornerstonejs/core";
 
 // Allow this mode by excluding non-imaging modalities such as SR, SEG
 // Also, SM is not a simple imaging modalities, so exclude it.
@@ -77,33 +77,43 @@ function modeFactory() {
     /**
      * Lifecycle hooks
      */
-    onModeInit: ({ extensionManager, query }) => {
-      const primaryDataSourceName = "gcp-dicomweb";
-      const secondGoogleServer = query.get("secondGoogleServer");
-      if (secondGoogleServer) {
-        const dataSourceBasedOnURL = secondGoogleServer.includes("/dicomStores")
-          ? "gcp-dicomweb-2"
-          : "idc-dicomweb";
-        extensionManager.addDataSource(
-          {
-            sourceName: "merge",
-            namespace: "@ohif/extension-default.dataSourcesModule.merge",
-            configuration: {
-              name: "merge",
-              friendlyName: "Merge Data Source",
-              seriesMerge: {
-                dataSourceNames: [primaryDataSourceName, dataSourceBasedOnURL],
-                defaultDataSourceName: primaryDataSourceName,
+    onModeInit: ({ extensionManager, appConfig, query }) => {
+      const defaultDataSourceName =
+        appConfig.defaultGCPDataSourceName || "gcp-dicomweb";
+
+      let isActive = false;
+      for (const dataSourceName of query.keys()) {
+        const dataSources = extensionManager.getDataSources(dataSourceName);
+        if (dataSources && dataSources.length) {
+          isActive = true;
+          extensionManager.addDataSource(
+            {
+              sourceName: "merge",
+              namespace: "@ohif/extension-default.dataSourcesModule.merge",
+              configuration: {
+                name: "merge",
+                friendlyName: "Merge Data Source",
+                seriesMerge: {
+                  dataSourceNames: [defaultDataSourceName, dataSourceName],
+                  defaultDataSourceName: defaultDataSourceName,
+                },
               },
             },
-          },
-          { activate: true }
-        );
-      } else {
-        extensionManager.setActiveDataSource(primaryDataSourceName);
+            { activate: true }
+          );
+        }
+      }
+
+      if (!isActive) {
+        extensionManager.setActiveDataSource(defaultDataSourceName);
       }
     },
-    onModeEnter: ({ servicesManager, extensionManager, commandsManager, appConfig }) => {
+    onModeEnter: ({
+      servicesManager,
+      extensionManager,
+      commandsManager,
+      appConfig,
+    }) => {
       const {
         measurementService,
         toolbarService,
@@ -210,8 +220,8 @@ function modeFactory() {
         EVENTS.STACK_VIEWPORT_NEW_STACK,
         boundedLoadDerivedDisplaySets
       );
-      
-      _activatePanelTriggersSubscriptions.forEach(sub => sub.unsubscribe());
+
+      _activatePanelTriggersSubscriptions.forEach((sub) => sub.unsubscribe());
       _activatePanelTriggersSubscriptions = [];
 
       toolGroupService.destroy();
