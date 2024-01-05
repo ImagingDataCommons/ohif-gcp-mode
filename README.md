@@ -10,7 +10,7 @@ This mode adds the following functionalities to your OHIF viewer fork:
 /** File: platform/app/package.json */
 
 "dependencies": {
-  "ohif-idc-mode": "https://github.com/ImagingDataCommons/ohif-gcp-mode#main",
+  "ohif-gcp-mode": "https://github.com/ImagingDataCommons/ohif-gcp-mode#main", /** You can use any valid branch name here (#main or #master or #your-branch) */
   ...
 ```
 
@@ -21,7 +21,7 @@ This mode adds the following functionalities to your OHIF viewer fork:
 "modes": [
   ...
   {
-    "packageName": "ohif-idc-mode",
+    "packageName": "ohif-gcp-mode",
     "version": "0.0.1" /** The version here does not matter since we are using a branch name to define this mode dependency instead of npm publishing */
   },
  ...
