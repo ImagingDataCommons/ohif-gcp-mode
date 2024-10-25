@@ -55,57 +55,80 @@ const dicomRt = {
 
 const extensionDependencies = {
   // Can derive the versions at least process.env.from npm_package_version
-  "@ohif/extension-default": "^3.0.0",
-  "@ohif/extension-cornerstone": "^3.0.0",
-  "@ohif/extension-measurement-tracking": "^3.0.0",
-  "@ohif/extension-cornerstone-dicom-sr": "^3.0.0",
-  "@ohif/extension-cornerstone-dicom-seg": "^3.0.0",
-  "@ohif/extension-cornerstone-dicom-rt": "^3.0.0",
-  "@ohif/extension-dicom-pdf": "^3.0.1",
-  "@ohif/extension-dicom-video": "^3.0.1",
+  "@ohif/extension-default": "3.9.0-beta.74",
+  "@ohif/extension-cornerstone": "3.9.0-beta.74",
+  "@ohif/extension-measurement-tracking": "3.9.0-beta.74",
+  "@ohif/extension-cornerstone-dicom-sr": "3.9.0-beta.74",
+  "@ohif/extension-cornerstone-dicom-seg": "3.9.0-beta.74",
+  "@ohif/extension-cornerstone-dicom-rt": "3.9.0-beta.74",
+  "@ohif/extension-dicom-pdf": "3.9.0-beta.74",
+  "@ohif/extension-dicom-video": "3.9.0-beta.74",
 };
 
 function modeFactory() {
   let _activatePanelTriggersSubscriptions = [];
   let boundedLoadDerivedDisplaySets;
   return {
-    // TODO: We're using this as a route segment
-    // We should not be.
     id,
     routeName:
       "projects/:project/locations/:location/datasets/:dataset/dicomStores/:dicomStore/study/:StudyInstanceUIDs",
     /**
      * Lifecycle hooks
      */
-    onModeInit: ({ extensionManager, appConfig, query }) => {
-      const defaultDataSourceName =
-        appConfig.defaultGCPDataSourceName || "gcp-dicomweb";
+    onModeInit: ({ extensionManager }) => {
+      const QUERY_PARAM_KEY = "gcp";
+      const gcpDataSourceName = "gcp-mode-dicomweb-data-source";
 
-      let isActive = false;
-      for (const dataSourceName of query.keys()) {
-        const dataSources = extensionManager.getDataSources(dataSourceName);
-        if (dataSources && dataSources.length) {
-          isActive = true;
-          extensionManager.addDataSource(
-            {
-              sourceName: "merge",
-              namespace: "@ohif/extension-default.dataSourcesModule.merge",
-              configuration: {
-                name: "merge",
-                friendlyName: "Merge Data Source",
-                seriesMerge: {
-                  dataSourceNames: [defaultDataSourceName, dataSourceName],
-                  defaultDataSourceName: defaultDataSourceName,
-                },
+      extensionManager.addDataSource({
+        friendlyName: "GCP DICOMWeb Data Source",
+        namespace: "@ohif/extension-default.dataSourcesModule.dicomweb",
+        sourceName: gcpDataSourceName,
+        configuration: {
+          name: gcpDataSourceName,
+          qidoSupportsIncludeField: false,
+          imageRendering: "wadors",
+          thumbnailRendering: "wadors",
+          enableStudyLazyLoad: true,
+          supportsFuzzyMatching: false,
+          supportsWildcard: false,
+          singlepart: "bulkdata,video,pdf",
+          useBulkDataURI: false,
+          onConfiguration: (dicomWebConfig, options) => {
+            const { params } = options;
+            const { project, location, dataset, dicomStore } = params;
+            const pathUrl = `https://healthcare.googleapis.com/v1/projects/${project}/locations/${location}/datasets/${dataset}/dicomStores/${dicomStore}/dicomWeb`;
+            return {
+              ...dicomWebConfig,
+              wadoRoot: pathUrl,
+              qidoRoot: pathUrl,
+              wadoUri: pathUrl,
+              wadoUriRoot: pathUrl,
+            };
+          },
+        },
+      });
+
+      const query = new URLSearchParams(window.location.search);
+      const gcpURLFromQueryParam = query.get(QUERY_PARAM_KEY);
+      if (gcpURLFromQueryParam) {
+        console.debug("Activating merge data source using gcp query param...");
+        extensionManager.addDataSource(
+          {
+            sourceName: "gcp-mode-merge",
+            namespace: "@ohif/extension-default.dataSourcesModule.merge",
+            configuration: {
+              name: "gcp-mode-merge",
+              friendlyName: "GCP Merge Data Source",
+              seriesMerge: {
+                dataSourceNames: [gcpDataSourceName, QUERY_PARAM_KEY],
+                defaultDataSourceName: gcpDataSourceName,
               },
             },
-            { activate: true }
-          );
-        }
-      }
-
-      if (!isActive) {
-        extensionManager.setActiveDataSource(defaultDataSourceName);
+          },
+          { activate: true }
+        );
+      } else {
+        extensionManager.setActiveDataSource(gcpDataSourceName);
       }
     },
     onModeEnter: ({
@@ -114,15 +137,8 @@ function modeFactory() {
       commandsManager,
       appConfig,
     }) => {
-      const {
-        measurementService,
-        toolbarService,
-        toolGroupService,
-        panelService,
-        segmentationService,
-      } = servicesManager.services;
-      appConfig.disableEditing = true;
-      appConfig.minDisplaySetsToRunHP = 10;
+      const { measurementService, toolbarService, toolGroupService } =
+        servicesManager.services;
 
       boundedLoadDerivedDisplaySets = loadDerivedDisplaySets.bind(
         null,
@@ -165,7 +181,6 @@ function modeFactory() {
         activateTool
       ));
 
-      toolbarService.init(extensionManager);
       toolbarService.addButtons(toolbarButtons);
       toolbarService.createButtonSection("primary", [
         "MeasurementTools",
@@ -178,28 +193,6 @@ function modeFactory() {
         "Crosshairs",
         "MoreTools",
       ]);
-
-      // // ActivatePanel event trigger for when a segmentation or measurement is added.
-      // // Do not force activation so as to respect the state the user may have left the UI in.
-      // _activatePanelTriggersSubscriptions = [
-      //   ...panelService.addActivatePanelTriggers(dicomSeg.panel, [
-      //     {
-      //       sourcePubSubService: segmentationService,
-      //       sourceEvents: [
-      //         segmentationService.EVENTS.SEGMENTATION_PIXEL_DATA_CREATED,
-      //       ],
-      //     },
-      //   ]),
-      //   ...panelService.addActivatePanelTriggers(tracked.measurements, [
-      //     {
-      //       sourcePubSubService: measurementService,
-      //       sourceEvents: [
-      //         measurementService.EVENTS.MEASUREMENT_ADDED,
-      //         measurementService.EVENTS.RAW_MEASUREMENT_ADDED,
-      //       ],
-      //     },
-      //   ]),
-      // ];
       eventTarget.addEventListener(
         EVENTS.STACK_VIEWPORT_NEW_STACK,
         boundedLoadDerivedDisplaySets
@@ -209,7 +202,6 @@ function modeFactory() {
       const {
         toolGroupService,
         syncGroupService,
-        toolbarService,
         segmentationService,
         cornerstoneViewportService,
       } = servicesManager.services;
