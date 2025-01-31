@@ -205,8 +205,6 @@ function modeFactory() {
         segmentationService,
         cornerstoneViewportService,
       } = servicesManager.services;
-      appConfig.disableEditing = false;
-      appConfig.minDisplaySetsToRunHP = undefined;
 
       eventTarget.removeEventListener(
         EVENTS.STACK_VIEWPORT_NEW_STACK,
