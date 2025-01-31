@@ -2,8 +2,6 @@ import { hotkeys } from "@ohif/core";
 import toolbarButtons from "./toolbarButtons.js";
 import { id } from "./id.js";
 import initToolGroups from "./initToolGroups.js";
-import loadDerivedDisplaySets from "./loadDerivedDisplaySets";
-import { eventTarget, EVENTS } from "@cornerstonejs/core";
 
 // Allow this mode by excluding non-imaging modalities such as SR, SEG
 // Also, SM is not a simple imaging modalities, so exclude it.
@@ -67,7 +65,6 @@ const extensionDependencies = {
 
 function modeFactory() {
   let _activatePanelTriggersSubscriptions = [];
-  let boundedLoadDerivedDisplaySets;
   return {
     id,
     routeName:
@@ -140,12 +137,6 @@ function modeFactory() {
       const { measurementService, toolbarService, toolGroupService } =
         servicesManager.services;
 
-      boundedLoadDerivedDisplaySets = loadDerivedDisplaySets.bind(
-        null,
-        servicesManager,
-        extensionManager,
-        commandsManager
-      );
       measurementService.clearMeasurements();
 
       // Init Default and SR ToolGroups
@@ -193,10 +184,6 @@ function modeFactory() {
         "Crosshairs",
         "MoreTools",
       ]);
-      eventTarget.addEventListener(
-        EVENTS.STACK_VIEWPORT_NEW_STACK,
-        boundedLoadDerivedDisplaySets
-      );
     },
     onModeExit: ({ servicesManager, appConfig }) => {
       const {
@@ -205,11 +192,6 @@ function modeFactory() {
         segmentationService,
         cornerstoneViewportService,
       } = servicesManager.services;
-
-      eventTarget.removeEventListener(
-        EVENTS.STACK_VIEWPORT_NEW_STACK,
-        boundedLoadDerivedDisplaySets
-      );
 
       _activatePanelTriggersSubscriptions.forEach((sub) => sub.unsubscribe());
       _activatePanelTriggersSubscriptions = [];
