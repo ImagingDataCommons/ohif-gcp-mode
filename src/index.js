@@ -1,11 +1,16 @@
 import { hotkeys } from "@ohif/core";
-import toolbarButtons from "./toolbarButtons.js";
-import { id } from "./id.js";
-import initToolGroups from "./initToolGroups.js";
+import i18n from "i18next";
+
+import { id } from "./id";
+import initToolGroups from "./initToolGroups";
+import toolbarButtons from "./toolbarButtons";
+import moreTools from "./moreTools";
+import onModeInit from "./onModeInit";
+import routeName from "./routeName";
 
 // Allow this mode by excluding non-imaging modalities such as SR, SEG
 // Also, SM is not a simple imaging modalities, so exclude it.
-const NON_IMAGE_MODALITIES = ["SM", "ECG", "SR", "SEG", "RTSTRUCT"];
+const NON_IMAGE_MODALITIES = ["SM", "ECG", "SEG", "RTSTRUCT"];
 
 const ohif = {
   layout: "@ohif/extension-default.layoutTemplateModule.viewerLayout",
@@ -45,7 +50,13 @@ const dicomSeg = {
   panel: "@ohif/extension-cornerstone-dicom-seg.panelModule.panelSegmentation",
 };
 
-const dicomRt = {
+const dicomPmap = {
+  sopClassHandler:
+    "@ohif/extension-cornerstone-dicom-pmap.sopClassHandlerModule.dicom-pmap",
+  viewport: "@ohif/extension-cornerstone-dicom-pmap.viewportModule.dicom-pmap",
+};
+
+const dicomRT = {
   viewport: "@ohif/extension-cornerstone-dicom-rt.viewportModule.dicom-rt",
   sopClassHandler:
     "@ohif/extension-cornerstone-dicom-rt.sopClassHandlerModule.dicom-rt",
@@ -53,149 +64,122 @@ const dicomRt = {
 
 const extensionDependencies = {
   // Can derive the versions at least process.env.from npm_package_version
-  "@ohif/extension-default": "3.9.0-beta.74",
-  "@ohif/extension-cornerstone": "3.9.0-beta.74",
-  "@ohif/extension-measurement-tracking": "3.9.0-beta.74",
-  "@ohif/extension-cornerstone-dicom-sr": "3.9.0-beta.74",
-  "@ohif/extension-cornerstone-dicom-seg": "3.9.0-beta.74",
-  "@ohif/extension-cornerstone-dicom-rt": "3.9.0-beta.74",
-  "@ohif/extension-dicom-pdf": "3.9.0-beta.74",
-  "@ohif/extension-dicom-video": "3.9.0-beta.74",
+  "@ohif/extension-default": "^3.0.0",
+  "@ohif/extension-cornerstone": "^3.0.0",
+  "@ohif/extension-measurement-tracking": "^3.0.0",
+  "@ohif/extension-cornerstone-dicom-sr": "^3.0.0",
+  "@ohif/extension-cornerstone-dicom-seg": "^3.0.0",
+  "@ohif/extension-cornerstone-dicom-pmap": "^3.0.0",
+  "@ohif/extension-cornerstone-dicom-rt": "^3.0.0",
+  "@ohif/extension-dicom-pdf": "^3.0.1",
+  "@ohif/extension-dicom-video": "^3.0.1",
 };
 
-function modeFactory() {
+function modeFactory({ modeConfiguration }) {
   let _activatePanelTriggersSubscriptions = [];
   return {
+    // TODO: We're using this as a route segment
+    // We should not be.
     id,
-    routeName:
-      "projects/:project/locations/:location/datasets/:dataset/dicomStores/:dicomStore/study/:StudyInstanceUIDs",
+    routeName,
+    displayName: i18n.t("Modes:Basic Viewer"),
     /**
      * Lifecycle hooks
      */
-    onModeInit: ({ extensionManager }) => {
-      const QUERY_PARAM_KEY = "gcp";
-      const gcpDataSourceName = "gcp-mode-dicomweb-data-source";
-
-      extensionManager.addDataSource({
-        friendlyName: "GCP DICOMWeb Data Source",
-        namespace: "@ohif/extension-default.dataSourcesModule.dicomweb",
-        sourceName: gcpDataSourceName,
-        configuration: {
-          name: gcpDataSourceName,
-          qidoSupportsIncludeField: false,
-          imageRendering: "wadors",
-          thumbnailRendering: "wadors",
-          enableStudyLazyLoad: true,
-          supportsFuzzyMatching: false,
-          supportsWildcard: false,
-          singlepart: "bulkdata,video,pdf",
-          useBulkDataURI: false,
-          onConfiguration: (dicomWebConfig, options) => {
-            const { params } = options;
-            const { project, location, dataset, dicomStore } = params;
-            const pathUrl = `https://healthcare.googleapis.com/v1/projects/${project}/locations/${location}/datasets/${dataset}/dicomStores/${dicomStore}/dicomWeb`;
-            return {
-              ...dicomWebConfig,
-              wadoRoot: pathUrl,
-              qidoRoot: pathUrl,
-              wadoUri: pathUrl,
-              wadoUriRoot: pathUrl,
-            };
-          },
-        },
-      });
-
-      const query = new URLSearchParams(window.location.search);
-      const gcpURLFromQueryParam = query.get(QUERY_PARAM_KEY);
-      if (gcpURLFromQueryParam) {
-        console.debug("Activating merge data source using gcp query param...");
-        extensionManager.addDataSource(
-          {
-            sourceName: "gcp-mode-merge",
-            namespace: "@ohif/extension-default.dataSourcesModule.merge",
-            configuration: {
-              name: "gcp-mode-merge",
-              friendlyName: "GCP Merge Data Source",
-              seriesMerge: {
-                dataSourceNames: [gcpDataSourceName, QUERY_PARAM_KEY],
-                defaultDataSourceName: gcpDataSourceName,
-              },
-            },
-          },
-          { activate: true }
-        );
-      } else {
-        extensionManager.setActiveDataSource(gcpDataSourceName);
-      }
-    },
-    onModeEnter: ({
+    onModeInit: onModeInit,
+    onModeEnter: function ({
       servicesManager,
       extensionManager,
       commandsManager,
-      appConfig,
-    }) => {
-      const { measurementService, toolbarService, toolGroupService } =
-        servicesManager.services;
+    }: withAppTypes) {
+      const {
+        measurementService,
+        toolbarService,
+        toolGroupService,
+        customizationService,
+      } = servicesManager.services;
 
       measurementService.clearMeasurements();
 
+      // customizationService.addModeCustomizations([
+      //   {
+      //     id: 'measurementLabels',
+      //     labelOnMeasure: true,
+      //     exclusive: true,
+      //     items: [
+      //       { value: 'Head', label: 'Head' },
+      //       { value: 'Shoulder', label: 'Shoulder' },
+      //       { value: 'Knee', label: 'Knee' },
+      //       { value: 'Toe', label: 'Toe' },
+      //     ],
+      //   },
+      // ]);
+
       // Init Default and SR ToolGroups
-      initToolGroups(extensionManager, toolGroupService, commandsManager);
+      initToolGroups(
+        extensionManager,
+        toolGroupService,
+        commandsManager,
+        this.labelConfig
+      );
 
-      let unsubscribe;
-
-      const activateTool = () => {
-        toolbarService.recordInteraction({
-          groupId: "WindowLevel",
-          itemId: "WindowLevel",
-          interactionType: "tool",
-          commands: [
-            {
-              commandName: "setToolActive",
-              commandOptions: {
-                toolName: "WindowLevel",
-              },
-              context: "CORNERSTONE",
-            },
-          ],
-        });
-
-        // We don't need to reset the active tool whenever a viewport is getting
-        // added to the toolGroup.
-        unsubscribe();
-      };
-
-      // Since we only have one viewport for the basic cs3d mode and it has
-      // only one hanging protocol, we can just use the first viewport
-      ({ unsubscribe } = toolGroupService.subscribe(
-        toolGroupService.EVENTS.VIEWPORT_ADDED,
-        activateTool
-      ));
-
-      toolbarService.addButtons(toolbarButtons);
+      toolbarService.addButtons([...toolbarButtons, ...moreTools]);
       toolbarService.createButtonSection("primary", [
         "MeasurementTools",
         "Zoom",
-        "WindowLevel",
         "Pan",
+        "TrackballRotate",
+        "WindowLevel",
         "Capture",
         "Layout",
-        "MPR",
         "Crosshairs",
         "MoreTools",
       ]);
+
+      customizationService.addModeCustomizations([
+        {
+          id: "segmentation.panel",
+          disableEditing: true,
+        },
+      ]);
+
+      // // ActivatePanel event trigger for when a segmentation or measurement is added.
+      // // Do not force activation so as to respect the state the user may have left the UI in.
+      // _activatePanelTriggersSubscriptions = [
+      //   ...panelService.addActivatePanelTriggers(dicomSeg.panel, [
+      //     {
+      //       sourcePubSubService: segmentationService,
+      //       sourceEvents: [
+      //         segmentationService.EVENTS.SEGMENTATION_PIXEL_DATA_CREATED,
+      //       ],
+      //     },
+      //   ]),
+      //   ...panelService.addActivatePanelTriggers(tracked.measurements, [
+      //     {
+      //       sourcePubSubService: measurementService,
+      //       sourceEvents: [
+      //         measurementService.EVENTS.MEASUREMENT_ADDED,
+      //         measurementService.EVENTS.RAW_MEASUREMENT_ADDED,
+      //       ],
+      //     },
+      //   ]),
+      // ];
     },
-    onModeExit: ({ servicesManager, appConfig }) => {
+    onModeExit: ({ servicesManager }: withAppTypes) => {
       const {
         toolGroupService,
         syncGroupService,
         segmentationService,
         cornerstoneViewportService,
+        uiDialogService,
+        uiModalService,
       } = servicesManager.services;
 
       _activatePanelTriggersSubscriptions.forEach((sub) => sub.unsubscribe());
       _activatePanelTriggersSubscriptions = [];
 
+      uiDialogService.dismissAll();
+      uiModalService.hide();
       toolGroupService.destroy();
       syncGroupService.destroy();
       segmentationService.destroy();
@@ -210,9 +194,13 @@ function modeFactory() {
       const modalities_list = modalities.split("\\");
 
       // Exclude non-image modalities
-      return !!modalities_list.filter(
-        (modality) => NON_IMAGE_MODALITIES.indexOf(modality) === -1
-      ).length;
+      return {
+        valid: !!modalities_list.filter(
+          (modality) => NON_IMAGE_MODALITIES.indexOf(modality) === -1
+        ).length,
+        description:
+          "The mode does not support studies that ONLY include the following modalities: SM, ECG, SEG, RTSTRUCT",
+      };
     },
     routes: [
       {
@@ -226,7 +214,7 @@ function modeFactory() {
             props: {
               leftPanels: [tracked.thumbnailList],
               rightPanels: [dicomSeg.panel, tracked.measurements],
-              rightPanelDefaultClosed: true,
+              rightPanelClosed: true,
               viewports: [
                 {
                   namespace: tracked.viewport,
@@ -249,8 +237,12 @@ function modeFactory() {
                   displaySetsToDisplay: [dicomSeg.sopClassHandler],
                 },
                 {
-                  namespace: dicomRt.viewport,
-                  displaySetsToDisplay: [dicomRt.sopClassHandler],
+                  namespace: dicomPmap.viewport,
+                  displaySetsToDisplay: [dicomPmap.sopClassHandler],
+                },
+                {
+                  namespace: dicomRT.viewport,
+                  displaySetsToDisplay: [dicomRT.sopClassHandler],
                 },
               ],
             },
@@ -268,12 +260,14 @@ function modeFactory() {
     sopClassHandlers: [
       dicomvideo.sopClassHandler,
       dicomSeg.sopClassHandler,
+      dicomPmap.sopClassHandler,
       ohif.sopClassHandler,
       dicompdf.sopClassHandler,
       dicomsr.sopClassHandler,
-      dicomRt.sopClassHandler,
+      dicomRT.sopClassHandler,
     ],
     hotkeys: [...hotkeys.defaults.hotkeyBindings],
+    ...modeConfiguration,
   };
 }
 
@@ -284,4 +278,4 @@ const mode = {
 };
 
 export default mode;
-export { initToolGroups, toolbarButtons };
+export { initToolGroups, moreTools, toolbarButtons };
