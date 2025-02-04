@@ -1,6 +1,6 @@
 {
   "name": "ohif-gcp-mode",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "description": "OHIF GCP Mode",
   "author": "IDC",
   "license": "MIT",
@@ -22,7 +22,9 @@
   "keywords": [
     "ohif-mode"
   ],
-  "scripts": {
+ "scripts": {
+    "clean": "shx rm -rf dist",
+    "clean:deep": "yarn run clean && shx rm -rf node_modules",
     "dev": "cross-env NODE_ENV=development webpack --config .webpack/webpack.dev.js --watch --output-pathinfo",
     "dev:cornerstone": "yarn run dev",
     "build": "cross-env NODE_ENV=production webpack --config .webpack/webpack.prod.js",
@@ -43,10 +45,11 @@
     "@ohif/extension-measurement-tracking": "3.9.0-beta.74"
   },
   "dependencies": {
-    "@babel/runtime": "^7.20.13"
+    "@babel/runtime": "^7.20.13",
+    "i18next": "^17.0.3"
   },
   "devDependencies": {
-    "webpack": "^5.50.0",
+    "webpack": "5.89.0",
     "webpack-merge": "^5.7.3"
   }
 }
