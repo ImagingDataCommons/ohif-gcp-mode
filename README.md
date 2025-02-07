@@ -9,7 +9,6 @@ The **GCP Mode** enhances the OHIF viewer, providing specialized functionality f
     ```
     http://localhost:3000/projects/project-x/locations/us/datasets/some-dataset/dicomStores/test-samples/study/1.3.6.1.4.1.123.5.2.1.123.123.123
     ```
-- **Automatic Derived Display Set Loading:** Automatically renders the latest derived display set for an active series (e.g., SRs, SEGs) without needing to select these thumbnails manually.
 
 ## How to Add GCP Mode to Your OHIF Fork
 
