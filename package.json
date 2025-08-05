@@ -1,5 +1,5 @@
 {
-  "name": "@ohif/mode-gcp",
+  "name": "ohif-gcp-mode",
   "version": "0.0.1",
   "description": "GCP Mode",
   "author": "ImagingDataCommons",

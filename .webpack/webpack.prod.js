@@ -34,7 +34,7 @@ module.exports = (env, argv) => {
     },
     output: {
       path: ROOT_DIR,
-      library: 'ohif-mode-gcp',
+      library: 'ohif-gcp-mode',
       libraryTarget: 'umd',
       libraryExport: 'default',
       filename: pkg.main,
