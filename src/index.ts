@@ -1,10 +1,7 @@
-import { hotkeys } from '@ohif/core';
 import i18n from 'i18next';
 import { id } from './id';
 import initToolGroups from './initToolGroups';
 import toolbarButtons from './toolbarButtons';
-import moreTools from './moreTools';
-import { performCustomizations } from './customizations';
 import onModeInit from './onModeInit';
 import routeName from './routeName';
 
@@ -83,28 +80,20 @@ function modeFactory({ modeConfiguration }) {
     id,
     routeName,
     displayName: i18n.t('Modes:Basic Viewer'),
+    onModeInit,
     /**
      * Lifecycle hooks
      */
-    onModeInit,
     onModeEnter: function ({ servicesManager, extensionManager, commandsManager }: withAppTypes) {
-      const {
-        measurementService,
-        toolbarService,
-        toolGroupService,
-        customizationService,
-        panelService,
-        segmentationService,
-      } = servicesManager.services;
+      const { measurementService, toolbarService, toolGroupService, customizationService } =
+        servicesManager.services;
 
       measurementService.clearMeasurements();
 
-      performCustomizations(customizationService);
-
       // Init Default and SR ToolGroups
-      initToolGroups(extensionManager, toolGroupService, commandsManager, this.labelConfig);
+      initToolGroups(extensionManager, toolGroupService, commandsManager);
 
-      toolbarService.addButtons([...toolbarButtons, ...moreTools]);
+      toolbarService.addButtons(toolbarButtons);
       toolbarService.createButtonSection('primary', [
         'MeasurementTools',
         'Zoom',
@@ -117,25 +106,73 @@ function modeFactory({ modeConfiguration }) {
         'MoreTools',
       ]);
 
+      toolbarService.createButtonSection('measurementSection', [
+        'Length',
+        'Bidirectional',
+        'ArrowAnnotate',
+        'EllipticalROI',
+        'RectangleROI',
+        'CircleROI',
+        'PlanarFreehandROI',
+        'SplineROI',
+        'LivewireContour',
+      ]);
+
+      toolbarService.createButtonSection('moreToolsSection', [
+        'Reset',
+        'rotate-right',
+        'flipHorizontal',
+        'ImageSliceSync',
+        'ReferenceLines',
+        'ImageOverlayViewer',
+        'StackScroll',
+        'invert',
+        'Probe',
+        'Cine',
+        'Angle',
+        'CobbAngle',
+        'Magnify',
+        'CalibrationLine',
+        'TagBrowser',
+        'AdvancedMagnify',
+        'UltrasoundDirectionalTool',
+        'WindowLevelRegion',
+      ]);
+
+      customizationService.setCustomizations({
+        'panelSegmentation.disableEditing': {
+          $set: true,
+        },
+      });
+
       // // ActivatePanel event trigger for when a segmentation or measurement is added.
       // // Do not force activation so as to respect the state the user may have left the UI in.
-      _activatePanelTriggersSubscriptions = [
-        ...panelService.addActivatePanelTriggers(cornerstone.segmentation, [
-          {
-            sourcePubSubService: segmentationService,
-            sourceEvents: [segmentationService.EVENTS.SEGMENTATION_ADDED],
-          },
-        ]),
-        ...panelService.addActivatePanelTriggers(tracked.measurements, [
-          {
-            sourcePubSubService: measurementService,
-            sourceEvents: [
-              measurementService.EVENTS.MEASUREMENT_ADDED,
-              measurementService.EVENTS.RAW_MEASUREMENT_ADDED,
-            ],
-          },
-        ]),
-      ];
+      // _activatePanelTriggersSubscriptions = [
+      //   ...panelService.addActivatePanelTriggers(
+      //     cornerstone.segmentation,
+      //     [
+      //       {
+      //         sourcePubSubService: segmentationService,
+      //         sourceEvents: [segmentationService.EVENTS.SEGMENTATION_ADDED],
+      //       },
+      //     ],
+      //     true
+      //   ),
+      //   ...panelService.addActivatePanelTriggers(
+      //     tracked.measurements,
+      //     [
+      //       {
+      //         sourcePubSubService: measurementService,
+      //         sourceEvents: [
+      //           measurementService.EVENTS.MEASUREMENT_ADDED,
+      //           measurementService.EVENTS.RAW_MEASUREMENT_ADDED,
+      //         ],
+      //       },
+      //     ],
+      //     true
+      //   ),
+      //   true,
+      // ];
     },
     onModeExit: ({ servicesManager }: withAppTypes) => {
       const {
@@ -150,7 +187,7 @@ function modeFactory({ modeConfiguration }) {
       _activatePanelTriggersSubscriptions.forEach(sub => sub.unsubscribe());
       _activatePanelTriggersSubscriptions = [];
 
-      uiDialogService.dismissAll();
+      uiDialogService.hideAll();
       uiModalService.hide();
       toolGroupService.destroy();
       syncGroupService.destroy();
@@ -184,8 +221,10 @@ function modeFactory({ modeConfiguration }) {
             id: ohif.layout,
             props: {
               leftPanels: [tracked.thumbnailList],
+              leftPanelResizable: true,
               rightPanels: [cornerstone.segmentation, tracked.measurements],
               rightPanelClosed: true,
+              rightPanelResizable: true,
               viewports: [
                 {
                   namespace: tracked.viewport,
@@ -240,7 +279,6 @@ function modeFactory({ modeConfiguration }) {
       dicomsr.sopClassHandler,
       dicomRT.sopClassHandler,
     ],
-    hotkeys: [...hotkeys.defaults.hotkeyBindings],
     ...modeConfiguration,
   };
 }
@@ -252,4 +290,4 @@ const mode = {
 };
 
 export default mode;
-export { initToolGroups, moreTools, toolbarButtons };
+export { initToolGroups, toolbarButtons };
