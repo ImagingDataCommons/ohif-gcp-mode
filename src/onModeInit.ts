@@ -2,6 +2,8 @@ export default ({ extensionManager }) => {
     const QUERY_PARAM_KEY = "gcp";
     const gcpDataSourceName = "gcp-mode-dicomweb-data-source";
     
+    console.debug("Initializing GCP Mode...");
+    
     extensionManager.addDataSource({
       friendlyName: "GCP DICOMWeb Data Source",
       namespace: "@ohif/extension-default.dataSourcesModule.dicomweb",
