@@ -77,6 +77,7 @@ function modeFactory({ modeConfiguration }) {
     id,
     routeName,
     displayName: 'GCP',
+    hide: true,
     onModeInit,
     /**
      * Lifecycle hooks
