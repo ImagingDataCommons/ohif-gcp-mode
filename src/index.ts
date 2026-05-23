@@ -200,7 +200,7 @@ function modeFactory({ modeConfiguration }) {
       //   true,
       // ];
     },
-    onModeExit: ({ servicesManager }: withAppTypes) => {
+    onModeExit: ({ servicesManager, extensionManager, appConfig }: withAppTypes) => {
       const {
         toolGroupService,
         syncGroupService,
@@ -209,6 +209,11 @@ function modeFactory({ modeConfiguration }) {
         uiDialogService,
         uiModalService,
       } = servicesManager.services;
+
+      const defaultDataSourceName = appConfig?.defaultDataSourceName;
+      if (defaultDataSourceName) {
+        extensionManager.setActiveDataSource(defaultDataSourceName);
+      }
 
       _activatePanelTriggersSubscriptions.forEach(sub => sub.unsubscribe());
       _activatePanelTriggersSubscriptions = [];
