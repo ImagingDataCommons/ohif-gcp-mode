@@ -1,11 +1,11 @@
 {
-  "name": "ohif-gcp-mode",
+  "name": "@idc/gcp-mode",
   "version": "0.0.1",
   "description": "GCP Mode",
   "author": "ImagingDataCommons",
   "license": "MIT",
   "repository": "OHIF/Viewers",
-  "main": "dist/umd/ohif-gcp-mode/index.umd.js",
+  "main": "dist/umd/@idc/gcp-mode/index.umd.js",
   "module": "src/index.ts",
   "engines": {
     "node": ">=14",
