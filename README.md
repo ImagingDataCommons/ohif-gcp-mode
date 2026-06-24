@@ -14,12 +14,12 @@ The **GCP Mode** enhances the OHIF viewer, providing specialized functionality f
 
 ### 1. Add GCP Mode as a Dependency
 
-Update `package.json` to include `ohif-gcp-mode` as a dependency. Since this mode is not published to NPM, specify the GitHub repository and branch name.
+Update `package.json` to include `@idc/gcp-mode` as a dependency. This package is scoped under `@idc` and is not published to the public NPM registry — pin it to a specific Git commit hash (not a branch name) to prevent dependency confusion.
 
 ```json
 /** File: platform/app/package.json */
 "dependencies": {
-  "ohif-gcp-mode": "https://github.com/ImagingDataCommons/ohif-gcp-mode#main",
+  "@idc/gcp-mode": "https://github.com/ImagingDataCommons/ohif-gcp-mode#<commit-sha>",
   ...
 }
 ```
@@ -32,8 +32,8 @@ Update `package.json` to include `ohif-gcp-mode` as a dependency. Since this mod
 "modes": [
   ...
   {
-    "packageName": "ohif-gcp-mode",
-    "version": "0.0.1" /** The version here does not matter since we are using a branch name to define this mode dependency instead of npm publishing */
+    "packageName": "@idc/gcp-mode",
+    "version": "0.0.1"
   },
  ...
 ```
